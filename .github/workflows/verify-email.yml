@@ -1,0 +1,19 @@
+name: Verify Student Email
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 23f3003587@ds.study.iitm.ac.in - Student Verification Step
+        run: |
+          echo "Student email verified: 23f3003587@ds.study.iitm.ac.in"
+          echo "Action completed successfully at $(date)"
