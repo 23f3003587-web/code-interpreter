@@ -62,7 +62,7 @@ def analyze_error_with_ai(code: str, tb: str) -> List[int]:
     try:
         client = OpenAI(
             api_key=token,
-            base_url="https://aipipe.org/openrouter/v1"   # ← aipipe proxy
+            base_url="https://aipipe.org/openai/v1"   # ← aipipe proxy
         )
 
         prompt = f"""You are an expert Python debugger.
@@ -79,7 +79,7 @@ TRACEBACK:
 """
 
         response = client.chat.completions.create(
-            model="google/gemini-2.0-flash-lite-001",   # cheap & fast via OpenRouter
+            model="gpt-4.1-nano",   # cheap & fast via OpenRouter
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0.0,
