@@ -44,17 +44,10 @@ def execute_python_code(code: str) -> dict:
     finally:
         sys.stdout = old_stdout
 
-def extract_lines_from_traceback(tb: str, max_line: int) -> List[int]:
-    """Fallback extractor that returns only valid line numbers from executed code."""
-    matches = re.findall(r'File "([^"]+)", line (\d+), in', tb)
-    user_lines = [int(lineno) for filename, lineno in matches if filename == "<string>" and 1 <= int(lineno) <= max_line]
-    if user_lines:
-        return sorted(set(user_lines))
-
-    # fallback: accept any line number within the code range
-    generic_lines = [int(lineno) for _, lineno in matches if 1 <= int(lineno) <= max_line]
-    return sorted(set(generic_lines)) if generic_lines else []
-
+def extract_lines_from_traceback(tb: str) -> List[int]:
+    """Fallback regex extractor (used if AI fails or no token)."""
+    matches = re.findall(r'line (\d+), in', tb)
+    return sorted(set(int(m) for m in matches)) if matches else []
 
 def analyze_error_with_ai(code: str, tb: str) -> List[int]:
     """
@@ -62,10 +55,9 @@ def analyze_error_with_ai(code: str, tb: str) -> List[int]:
     Only called when execution fails.
     """
     token = os.getenv("AIPIPE_TOKEN")
-    max_line = len(code.splitlines())
     if not token:
         print("⚠️ No AIPIPE_TOKEN — using fallback line extraction")
-        return extract_lines_from_traceback(tb, max_line)
+        return extract_lines_from_traceback(tb)
 
     try:
         client = OpenAI(
@@ -104,17 +96,11 @@ TRACEBACK:
 
         parsed = json.loads(content)
         lines = parsed.get("error_lines", [])
-        valid_lines = [int(x) for x in lines if isinstance(x, int) or (isinstance(x, str) and x.isdigit())]
-        valid_lines = [x for x in valid_lines if 1 <= x <= max_line]
-        if valid_lines:
-            return sorted(set(valid_lines))
-
-        print("⚠️ AI returned invalid line numbers — using fallback")
-        return extract_lines_from_traceback(tb, max_line)
+        return [int(x) for x in lines if str(x).isdigit()]
 
     except Exception as e:
         print(f"AI analysis error: {e} — falling back to regex")
-        return extract_lines_from_traceback(tb, max_line)
+        return extract_lines_from_traceback(tb)
 
 @app.post("/code-interpreter")
 async def code_interpreter(req: CodeRequest):
